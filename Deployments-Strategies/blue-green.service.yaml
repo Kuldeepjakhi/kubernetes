@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata: 
+  name: blue-green-service
+  labels: 
+    app: blue-green-deployment
+    version: grafana-v1
+spec:
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 3000
+  selector: 
+    app: blue-deployment
+    version: grafana-v1
+  type: NodePort

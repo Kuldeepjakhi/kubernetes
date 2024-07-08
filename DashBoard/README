@@ -1,0 +1,10 @@
+wget https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+kubectl apply -f recommended.yaml
+kubectl apply -f dashboard-sa.yaml
+kubectl -n kubernetes-dashboard create token admin-user
+kubectl -n kubernetes-dashboard port-forward service/kubernetes-dashboard 8443:443
+
+
+
+URL=https://localhost:8443/#/login
+

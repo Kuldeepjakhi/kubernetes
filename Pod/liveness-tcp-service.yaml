@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata: 
+  name: liveness-tcp-service
+  labels: 
+    app: liveness-tcp-servicet
+spec:
+  ports:
+    - name: http
+      port: 8090
+      targetPort: 15672
+  selector: 
+    app: rabbitmq 
+  type: NodePort
