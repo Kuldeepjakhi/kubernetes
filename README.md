@@ -367,6 +367,199 @@ The restartPolicy for a Pod applies to app containers in the Pod and to regu
 
 Setting the restart policy to Always doesn't mean Kubernetes will keep trying to restart a failed Pod perpetually. Instead, it uses an exponential back-off delay that starts at 10 seconds and goes up to five minutes. In other words, let's say you have a Pod with a critical error that prevents it from completing its startup process. Kubernetes will try to start it, see that it failed, wait 10 seconds, then restart it. The next time it fails, Kubernetes will wait 20 seconds, then 40 seconds, then 1 minute 20 seconds, etc, all the way up to five minutes. After this point, if the container still fails to start, Kubernetes will no longer try to start it. But if Kubernetes does manage to get the container running, this timer will reset after 10 minutes of continuous runtime.  
 
+## Resources Management
+
+### Kubernetes Limits and Requests
+
+**Kubernetes defines Limits as the maximum amount of a resource** to be used by a container. This means that the container can never consume more than the memory amount or CPU amount indicated.  
+**Requests, on the other hand, are the minimum guaranteed amount of a resource** that is reserved for a container.  
+
+**Example**
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: resource-pod
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: redis
+      image: redis:5.0.3-alpine
+      resources:
+        limits:
+          memory: 600Mi
+          cpu: 1
+        requests:
+          memory: 300Mi
+          cpu: 500m
+```
+
+In above example, the container within the pod requests a minimum of 300 megabytes of memory and 500 milliCPU (0.1 CPU). and container is constrained to using a maximum of 600 megabytes of memory and 1000 milliCPU.
+
+1. Pod effective request is 400 MiB of memory and 600 millicores of CPU. You need a node with enough free allocatable space to schedule the pod.
+2. CPU shares for the redis container will be 512, and Kubernetes always assign 1024 shares to every core, so redis: 1024 * 0.5 cores ≅ 512.
+3. Redis container will be OOM killed if it tries to allocate more than 600MB of RAM, most likely making the pod fail.
+4. Redis will suffer CPU throttle if it tries to use more than 100ms of CPU in every 100ms, (since we have 4 cores, available time would be 400ms every 100ms) causing performance degradation.
+
+
+**Note** 1000m (milicores) = 1 core = 1 vCPU = 1 AWS vCPU = 1 GCP Core.  
+100m (milicores) = 0.1 core = 0.1 vCPU = 0.1 AWS vCPU = 0.1 GCP Core.  
+
+**To check Pod Memory and CPU consumption.**
+
+1. All Pods
+`kubectl top pods`
+
+2. Specefic Pod
+`kubectl top pod <pod_name> -n <namespace_name>`
+
+** To check Pod Limits and Requests value.
+
+`kubectl describe pod <pod_name> -n <namespace_name> |grep -A 5 "Limits"`
+
+**To check Master and Nodes CPU and Memory Cosumption.**
+
+`kubectl top nodes`
+
+**To check specific node total CPU and Memory.**
+`kubectl describe node <node_name> | grep -A 5 "Resource"`
+
+
+**CPU Memory Limit Exceed test**
+
+`kubectl create ns cpu-mem-test`
+
+**mem_cpu_oom_cpu_throttling_test.yaml**
+
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cpu-mem-test
+  namespace: cpu-mem-test
+spec:
+  restartPolicy: Never
+  containers:
+  - name: cpu-mem-test
+    image: najinyang001/stress:latest
+    resources:
+      requests:
+        memory: "100Mi"
+        cpu: 0.5
+      limits:
+        memory: "200Mi"
+        cpu: 1
+    command: ["stress"]
+    args: ["--vm", "1", "--vm-bytes", "250M", "--vm-hang", "1"]
+
+```
+In Above example  the args section of the configuration file, you can see that the Container will attempt to allocate 250 MiB of memory, which is well above the 200 MiB limit. At this condition container will killed with OOM Error.
+
+`kubectl apply -f mem_cpu_oom_cpu_throttling_test.yaml`
+
+In the same Example if we set arg --vm "2", which is bigger than limits(1). In that case the container's CPU use is being throttled, because the container is attempting to use more CPU resources than its limit.
+
+## Configure Default Memory Requests and Limits for a Namespace
+
+LimitRange allows you to set Cpu memory limitations per namespace. 
+Suppose you have a namespace called **limit-range** and you want pods in this namespace should not consume more than 1 GB of memory and 1 CPU core.
+
+1. Create namespace
+`kubectl create ns limit-range`
+
+2. Set Limit Range.
+``` yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limitrange
+  namespace: limit-range
+spec:
+  limits:
+  - max:
+      cpu: 1000m
+      memory: 1Gi
+    type: Pod
+```
+
+`kubectl apply -f set_limitRange_ns.yaml`
+
+`kubectl describe limitranges -n limit-range`
+
+**Try deploying a Pod with two CPU Cores:**
+
+***limitrange-test.yaml**
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: limitrange-test-nginx
+  namespace: limit-range
+spec:
+  containers:
+  - image: nginx
+    name: limitrange-test-nginx
+    resources:
+      requests:
+        cpu: 2000m
+      limits:
+        cpu: 2000m
+```
+
+`kubectl apply -f limitrange-test.yaml`
+
+You will get Error:
+
+`Error from server (Forbidden): error when creating "limitrange-test.yaml": pods "limitrange-test-nginx" is forbidden: [maximum cpu usage per Pod is 1, but limit is 2, maximum memory usage per Pod is 1Gi.  No limit is specified]`
+
+### Setting Limits for Pods, Containers, and Persistent Volume Claims  
+
+**set_default_limitrange.yaml**
+``` yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limit-range
+spec:
+  limits:
+    - type: Pod
+      min:
+        cpu: 50m
+        memory: 5Mi
+      max:
+        cpu: "2"
+        memory: 3Gi
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: 10Mi
+      default:
+        cpu: 200m
+        memory: 100Mi
+      min:
+        cpu: 50m
+        memory: 5Mi
+      max:
+        cpu: "1"
+        memory: 2Gi
+      maxLimitRequestRatio:
+        cpu: "4"
+        memory: 10
+    - type: PersistentVolumeClaim
+      min:
+        storage: 1Gi
+      max:
+        storage: 10Gi
+```
+
+`kubectl describe limitranges -n limit-range`
+
+
+**Pod Limits:** Define minimum and maximum CPU and memory limits for pods, ensuring they operate within specified boundaries.  
+**Container Limits:** Set default requests and limits for CPU and memory, with minimum and maximum constraints to prevent excessive resource usage.  
+**Persistent Volume Claims:** Enforce minimum and maximum storage limits for persistent volume claims, controlling the amount of storage consumed by applications. 
+
 ## DEPLOYMENTS
 **Deployment** is a Kubernetes object that manages a set of identical pods, ensuring that a specified number of replicas of the pod are running at any given time. It provides a declarative approach to managing Kubernetes objects, allowing for automated rollouts and rollbacks of containerized applications.  
 Moreover, a Deployment manages the deployment of a new version of an application. It also helps us roll back to a previous version by creating a replica set and updating it with the new configuration. A ReplicaSet ensures that the specified number of replicas of the pods are always running. Hence, if any pod fails, it creates a new one to maintain the desired state.  
