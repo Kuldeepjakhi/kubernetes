@@ -621,7 +621,7 @@ Quality of Service (QoS) in Kubernetes refers to the system’s ability to prior
 
 ubernetes categorizes Pods into three QoS classes: Guaranteed, Burstable, and BestEffort. The type of class determines the order of priority for eviction.
 
-### Guaranteed QoS Class
+### 1. Guaranteed
 Kubernetes considers Pods classified as Guaranteed as a top priority. It won’t evict them until they exceed their limits. A Pod with a Guaranteed class has the following characteristics:
 
 All containers in the Pod have a memory limit and request.
@@ -644,7 +644,7 @@ resources:
         memory: "300Mi"
         cpu: "800m"
 ```
-### Burstable QoS Class
+### 2. Burstable
 Kubernetes assigns the Burstable class to a Pod when a container in the pod has more resource limit than the request value. A pod in this category will have the following characteristics:
 
 The Pod has not met the criteria for Guaranteed QoS class.
@@ -664,7 +664,7 @@ resources:
         memory: "100Mi"
         cpu: "600m"
 ```
-### BestEffort QoS Class
+### 3. BestEffort
 Pods characterized in the QoS class of BestEffort, have containers with no resource limits or requests set. In the configuration file, the resources are not allocated for either memory or CPU. BestEffort Pods use resources available in the node.
 
 Kubernetes considers such Pods as low priority. It will evict them first in case resources are scarce in the node. Kubernetes assigns BestEffort class to applications that can experience downtimes, like test systems and non-critical applications like video processing.
