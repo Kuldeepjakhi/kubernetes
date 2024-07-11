@@ -130,6 +130,14 @@ kubectl label nodes kubenode1 memorytyp=high
 A Pod is the smallest deployable unit that can be deployed and managed by Kubernetes. In other words, if you need to run a single container in Kubernetes, then you need to create a Pod for that container. At the same time, a Pod can contain more than one container, if these containers are relatively tightly coupled. In a pre-container world, they would have executed on the same server.  
 A standard use case for a multi-container Pod with shared Volume is when one container writes to the shared directory (logs or other files), and the other container reads from the shared directory. Example:
 
+
+**Create Pod (imperative way)**
+
+`kubectl run temp-pod --image=nginx:1.14.2 -it -- /bin/sh`
+
+
+**Create Pod (Declrative way)**
+
 ``` yaml
 apiVersion: v1
 kind: Pod
@@ -146,6 +154,15 @@ spec:
 ```
 
 `Note:` You need to install a container runtime into each node in the cluster so that Pods can run there.
+
+
+
+**Straight away we can see four top-level resources: apiVersion kind metadata spec**
+&#8594; apiVersion     
+&#8594; kind  
+&#8594; metadata    
+&#8594; spec  
+
 
 ### Multi-Container Pods
 The primary purpose of a multi-container Pod is to support co-located, co-managed helper processes for a main program. There are some general patterns of using helper processes in Pods:  
@@ -558,7 +575,113 @@ spec:
 
 **Pod Limits:** Define minimum and maximum CPU and memory limits for pods, ensuring they operate within specified boundaries.  
 **Container Limits:** Set default requests and limits for CPU and memory, with minimum and maximum constraints to prevent excessive resource usage.  
-**Persistent Volume Claims:** Enforce minimum and maximum storage limits for persistent volume claims, controlling the amount of storage consumed by applications. 
+**Persistent Volume Claims:** Enforce minimum and maximum storage limits for persistent volume claims, controlling the amount of storage consumed by applications.  
+
+
+## Kubernetes resource quotas
+In short, resource quotas provide constraints that limit resource consumption per namespace. They can be applied only at the namespace level, which means they can be applied to computing resources and limit the number of objects inside the namespace.
+
+A Kubernetes resource quota is defined by a ResourceQuota object. When applied to a namespace, it can limit computing resources such as CPU and memory as well as the creation of the following objects:
+
+Pods
+Services
+Secrets
+Persistent Volume Claims (PVCs)
+ConfigMaps
+
+Example: **Resource_quota.yaml**
+
+``` yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: basic-quota
+spec:
+  hard:
+    pods: "5"
+    requests.cpu: "2"
+    requests.memory: 1Gi
+    limits.cpu: "4"
+    limits.memory: 2Gi
+    requests.storage: 10Gi
+    persistentvolumeclaims: 10
+    services.loadbalancers: 5
+    services.nodeports: 10
+```
+
+`kubectl create ns resource-quota-ns`
+`kubectl apply -f Resource_quota.yaml -n resource-quota-ns`
+
+To check resource qouta.
+`kubectl get quota -n resource-quota-ns`
+
+## Kubernetes QoS Classes
+
+Quality of Service (QoS) in Kubernetes refers to the system’s ability to prioritize and manage resources effectively among different pods running within the cluster. Kubernetes offers three levels of QoS for pods: BestEffort, Burstable, and Guaranteed. These QoS classes determine how Kubernetes schedules and allocates resources to pods based on their resource requirements and usage patterns.
+
+ubernetes categorizes Pods into three QoS classes: Guaranteed, Burstable, and BestEffort. The type of class determines the order of priority for eviction.
+
+### Guaranteed QoS Class
+Kubernetes considers Pods classified as Guaranteed as a top priority. It won’t evict them until they exceed their limits. A Pod with a Guaranteed class has the following characteristics:
+
+All containers in the Pod have a memory limit and request.
+All containers in the Pod have a memory limit equal to the memory request.
+All containers in the Pod have a CPU limit and a CPU request.
+All containers in the Pod have a CPU limit equal to the CPU request.  
+
+For example, if the memory limit is 300MiB, the memory request should also be 300MiB. While the CPU limit is 800miliCPU, it should equal the CPU request. If a container is only assigned a resource limit without the request, Kubernetes will automatically match an equal number to the request value.
+
+Software that runs full-time, such as database servers and real-time applications, is often assigned the Guaranteed QoS class.
+
+The resources section in the YAML file will look like so:
+
+``` yaml
+resources:
+      limits:
+        memory: "300Mi"
+        cpu: "800m"
+      requests:
+        memory: "300Mi"
+        cpu: "800m"
+```
+### Burstable QoS Class
+Kubernetes assigns the Burstable class to a Pod when a container in the pod has more resource limit than the request value. A pod in this category will have the following characteristics:
+
+The Pod has not met the criteria for Guaranteed QoS class.
+A container in the Pod has an unequal memory or CPU request or limit
+For example, if a container in the Pod has a memory limit of 300MiB and a memory request of 100MiB, Kubernetes will classify it as Burstable. If the node runs out of resources, this Pod is the second priority for eviction.
+
+Common use cases for this class include websites and email systems that do not use many resources.
+
+The resource section on the YAML file will look like so:
+
+``` yaml
+resources:
+      limits:
+        memory: "300Mi"
+        cpu: "800m"
+      requests:
+        memory: "100Mi"
+        cpu: "600m"
+```
+### BestEffort QoS Class
+Pods characterized in the QoS class of BestEffort, have containers with no resource limits or requests set. In the configuration file, the resources are not allocated for either memory or CPU. BestEffort Pods use resources available in the node.
+
+Kubernetes considers such Pods as low priority. It will evict them first in case resources are scarce in the node. Kubernetes assigns BestEffort class to applications that can experience downtimes, like test systems and non-critical applications like video processing.
+
+The YAML file will not have a resource section. It will look like so:
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+    name: qos-demo-3     
+    namespace: qos-example     
+spec:
+    containers:
+      - name: qos-demo-3-ctr
+        image: nginx
+```
 
 ## DEPLOYMENTS
 **Deployment** is a Kubernetes object that manages a set of identical pods, ensuring that a specified number of replicas of the pod are running at any given time. It provides a declarative approach to managing Kubernetes objects, allowing for automated rollouts and rollbacks of containerized applications.  
@@ -751,7 +874,7 @@ $ kubectl api-resources | awk '{print $5}'
 
 <img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*dYgB_dAT731bbuueBXhF4g.png" width="60%" height="60%">
 
-**In the spec section, ** 
+**In the spec section,** 
 &#8594; First, the replicas that define the number pod of instances that deploy and should keep alive.  
 &#8594; Next, we use a label selector to tell the deployment which pods are part of the deployment.  
 &#8594; This essentially says all the pods matching these labels are grouped in our deployment.  
