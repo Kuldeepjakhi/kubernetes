@@ -617,21 +617,21 @@ To check resource qouta.
 
 ## Kubernetes QoS Classes
 
-Quality of Service (QoS) in Kubernetes refers to the system’s ability to prioritize and manage resources effectively among different pods running within the cluster. Kubernetes offers three levels of QoS for pods: BestEffort, Burstable, and Guaranteed. These QoS classes determine how Kubernetes schedules and allocates resources to pods based on their resource requirements and usage patterns.
+Quality of Service (QoS) in Kubernetes refers to the system’s ability to prioritize and manage resources effectively among different pods running within the cluster. Kubernetes offers three levels of QoS for pods: BestEffort, Burstable, and Guaranteed. These QoS classes determine how Kubernetes schedules and allocates resources to pods based on their resource requirements and usage patterns.  
 
-ubernetes categorizes Pods into three QoS classes: Guaranteed, Burstable, and BestEffort. The type of class determines the order of priority for eviction.
+kubernetes categorizes Pods into three QoS classes: Guaranteed, Burstable, and BestEffort. The type of class determines the order of priority for eviction.
 
 ### 1. Guaranteed
 Kubernetes considers Pods classified as Guaranteed as a top priority. It won’t evict them until they exceed their limits. A Pod with a Guaranteed class has the following characteristics:
 
-All containers in the Pod have a memory limit and request.
-All containers in the Pod have a memory limit equal to the memory request.
-All containers in the Pod have a CPU limit and a CPU request.
-All containers in the Pod have a CPU limit equal to the CPU request.  
+All containers in the Pod have a memory limit and request.  
+All containers in the Pod have a memory limit equal to the memory request.  
+All containers in the Pod have a CPU limit and a CPU request.  
+All containers in the Pod have a CPU limit equal to the CPU request.    
 
-For example, if the memory limit is 300MiB, the memory request should also be 300MiB. While the CPU limit is 800miliCPU, it should equal the CPU request. If a container is only assigned a resource limit without the request, Kubernetes will automatically match an equal number to the request value.
+For example, if the memory limit is 300MiB, the memory request should also be 300MiB. While the CPU limit is 800miliCPU, it should equal the CPU request. If a container is only assigned a resource limit without the request, Kubernetes will automatically match an equal number to the request value.  
 
-Software that runs full-time, such as database servers and real-time applications, is often assigned the Guaranteed QoS class.
+Software that runs full-time, such as database servers and real-time applications, is often assigned the Guaranteed QoS class.  
 
 The resources section in the YAML file will look like so:
 
@@ -647,11 +647,12 @@ resources:
 ### 2. Burstable
 Kubernetes assigns the Burstable class to a Pod when a container in the pod has more resource limit than the request value. A pod in this category will have the following characteristics:
 
-The Pod has not met the criteria for Guaranteed QoS class.
-A container in the Pod has an unequal memory or CPU request or limit
-For example, if a container in the Pod has a memory limit of 300MiB and a memory request of 100MiB, Kubernetes will classify it as Burstable. If the node runs out of resources, this Pod is the second priority for eviction.
+The Pod has not met the criteria for Guaranteed QoS class.  
+A container in the Pod has an unequal memory or CPU request or limit. 
 
-Common use cases for this class include websites and email systems that do not use many resources.
+For example, if a container in the Pod has a memory limit of 300MiB and a memory request of 100MiB, Kubernetes will classify it as Burstable. If the node runs out of resources, this Pod is the second priority for eviction.  
+
+Common use cases for this class include websites and email systems that do not use many resources.  
 
 The resource section on the YAML file will look like so:
 
@@ -665,9 +666,9 @@ resources:
         cpu: "600m"
 ```
 ### 3. BestEffort
-Pods characterized in the QoS class of BestEffort, have containers with no resource limits or requests set. In the configuration file, the resources are not allocated for either memory or CPU. BestEffort Pods use resources available in the node.
+Pods characterized in the QoS class of BestEffort, have containers with no resource limits or requests set. In the configuration file, the resources are not allocated for either memory or CPU. BestEffort Pods use resources available in the node.  
 
-Kubernetes considers such Pods as low priority. It will evict them first in case resources are scarce in the node. Kubernetes assigns BestEffort class to applications that can experience downtimes, like test systems and non-critical applications like video processing.
+Kubernetes considers such Pods as low priority. It will evict them first in case resources are scarce in the node. Kubernetes assigns BestEffort class to applications that can experience downtimes, like test systems and non-critical applications like video processing.  
 
 The YAML file will not have a resource section. It will look like so:
 
