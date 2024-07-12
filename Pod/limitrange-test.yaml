@@ -9,6 +9,6 @@ spec:
     name: limitrange-test-nginx
     resources:
       requests:
-        cpu: 2000m
+        cpu: 200m
       limits:
-        cpu: 2000m
+        cpu: 200m
