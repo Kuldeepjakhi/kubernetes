@@ -384,6 +384,88 @@ The restartPolicy for a Pod applies to app containers in the Pod and to regu
 
 Setting the restart policy to Always doesn't mean Kubernetes will keep trying to restart a failed Pod perpetually. Instead, it uses an exponential back-off delay that starts at 10 seconds and goes up to five minutes. In other words, let's say you have a Pod with a critical error that prevents it from completing its startup process. Kubernetes will try to start it, see that it failed, wait 10 seconds, then restart it. The next time it fails, Kubernetes will wait 20 seconds, then 40 seconds, then 1 minute 20 seconds, etc, all the way up to five minutes. After this point, if the container still fails to start, Kubernetes will no longer try to start it. But if Kubernetes does manage to get the container running, this timer will reset after 10 minutes of continuous runtime.  
 
+
+# Namespaces
+
+In Kubernetes, namespaces provide a mechanism for isolating groups of resources within a single cluster. Names of resources need to be unique within a namespace, but not across namespaces. Namespace-based scoping is applicable only for namespaced objects (e.g. Deployments, Services, etc.) and not for cluster-wide objects (e.g. StorageClass, Nodes, PersistentVolumes, etc.).
+
+
+
+You can think of a Namespace as a virtual cluster inside your Kubernetes cluster.
+Kubernetes namespace allows you logically organize your resources into groups.
+You can have multiple namespaces inside a single Kubernetes cluster, and they are all logically isolated from each other.
+The objects part of this namespace will be part of no other namespaces.  
+
+## Why do you need namespaces?
+When we have a large set of Kubernetes resources running on our cluster Kubernetes namespaces helps in organizing them and allows you to group them together based on the nature of the project.  
+By doing so you have more control over them and can effectively manage them by using unit filters.  
+This will also allow the teams or projects to exist in their own virtual clusters without fear of impacting each other’s work. 
+For example, you can have separate namespaces created for different environments such as development, staging, production, etc. for a project or an application.
+
+Kubernetes starts with four initial namespaces:  
+`default`
+Kubernetes includes this namespace so that you can start using your new cluster without first creating a namespace.  
+`kube-node-lease`
+This namespace holds Lease objects associated with each node. Node leases allow the kubelet to send heartbeats so that the control plane can detect node failure.  
+`kube-public`
+This namespace is readable by all clients (including those not authenticated). This namespace is mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public aspect of this namespace is only a convention, not a requirement.  
+`kube-system`
+The namespace for objects created by the Kubernetes system. It would contain pods like kube-dns, kube-proxy, kube-API, and others controllers.
+
+<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*rOJQ-So05qyaFynSIQLgRg.png" width="50%" height="50%">  
+  
+kubectl create namespace
+`kubectl create namespace <namespace_name>`
+
+
+
+List all available namespaces  
+`kubectl get ns`. 
+
+Declarative way
+**example_ns.yaml**
+``` yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backend
+```
+`kubectl apply -f example_ns.yaml`  
+
+
+List All pods under specific Namespace.
+
+`kubectl get pods -n <namespace_name>`
+
+Namespace in Pod/Deployment yaml
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  namespace: frontend
+  labels:
+    name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+```
+
+Get detailed information about the namespace.
+`kubectl describe ns <namespace_name>`
+
+Deploy Pod in specific Namespace.  
+
+`kubectl run nginx --image=nginx --restart=Never -n frontend`
+
+
+Delete Namespace. 
+`kubectl delete ns <namespace_name>`  
+
+
+
 ## Resources Management
 
 ### Kubernetes Limits and Requests
