@@ -172,17 +172,17 @@ The `kind` field defines the type of resource being created or modified. It dete
 
 
 `metadata :`
-The `metadata` field contains essential information about the resource, such as its name, labels, and annotations. It helps identify and organize resources within the cluster. The following are important subfields of metadata:
-&#8594; *name:* Specifies the name of the resource, allowing it to be uniquely identified within its namespace.  
-&#8594; *labels:* Enables categorization and grouping of resources based on key-value pairs. Labels are widely used for selecting resources when using selectors or applying deployments.  
-&#8594; *annotations:* Provides additional information or metadata about the resource. Annotations are typically used for documentation purposes, tooling integrations, or adding custom metadata.  
+The `metadata` field contains essential information about the resource, such as its name, labels, and annotations. It helps identify and organize resources within the cluster. The following are important subfields of metadata:  
+  &#8594; *name:* Specifies the name of the resource, allowing it to be uniquely identified within its namespace.  
+  &#8594; *labels:* Enables categorization and grouping of resources based on key-value pairs. Labels are widely used for selecting resources when using selectors or applying deployments.  
+  &#8594; *annotations:* Provides additional information or metadata about the resource. Annotations are typically used for documentation purposes, tooling integrations, or adding custom metadata.  
 
 `spec :`
 The `spec` field describes the desired state of the resource. It outlines the configuration details and behavior of the resource. The structure and content of the `spec` field vary depending on the resource kind. Here are a few examples:  
-&#8594; *Deployment:* The `spec` includes details such as the number of replicas, container specifications (e.g., image, ports, environment variables), and volume mounts.  
-&#8594; *Service:* The `spec` defines the networking rules for the service, including the exposed ports, service type (e.g., ClusterIP, NodePort, LoadBalancer), and target ports.    
-&#8594; *Pod:* The `spec` describes the container specifications, such as the image, ports, environment variables, and volumes.  
-&#8594; *ConfigMap:* The `spec` specifies the key-value pairs or configuration files that need to be made available to containers as environment variables or mounted volumes.  
+  &#8594; *Deployment:* The `spec` includes details such as the number of replicas, container specifications (e.g., image, ports, environment variables), and volume mounts.  
+  &#8594; *Service:* The `spec` defines the networking rules for the service, including the exposed ports, service type (e.g., ClusterIP, NodePort, LoadBalancer), and target ports.    
+  &#8594; *Pod:* The `spec` describes the container specifications, such as the image, ports, environment variables, and volumes.  
+  &#8594; *ConfigMap:* The `spec` specifies the key-value pairs or configuration files that need to be made available to containers as environment variables or mounted volumes.  
 
 
 
