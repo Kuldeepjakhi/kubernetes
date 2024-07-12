@@ -157,7 +157,7 @@ spec:
 
 
 
-**Straight away we can see four top-level resources: apiVersion kind metadata spec**
+**Straight away we can see four top-level resources:**  
 &#8594; apiVersion     
 &#8594; kind  
 &#8594; metadata    
@@ -405,22 +405,27 @@ For example, you can have separate namespaces created for different environments
 Kubernetes starts with four initial namespaces:  
 `default`
 Kubernetes includes this namespace so that you can start using your new cluster without first creating a namespace.  
+
+
 `kube-node-lease`
-This namespace holds Lease objects associated with each node. Node leases allow the kubelet to send heartbeats so that the control plane can detect node failure.  
+This namespace holds Lease objects associated with each node. Node leases allow the kubelet to send heartbeats so that the control plane can detect node failure. 
+
+
 `kube-public`
-This namespace is readable by all clients (including those not authenticated). This namespace is mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public aspect of this namespace is only a convention, not a requirement.  
+This namespace is readable by all clients (including those not authenticated). This namespace is mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public aspect of this namespace is only a convention, not a requirement. 
+
+
 `kube-system`
 The namespace for objects created by the Kubernetes system. It would contain pods like kube-dns, kube-proxy, kube-API, and others controllers.
 
 <img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*rOJQ-So05qyaFynSIQLgRg.png" width="50%" height="50%">  
   
-kubectl create namespace
+kubectl create namespace.  
 `kubectl create namespace <namespace_name>`
 
 
-
 List all available namespaces  
-`kubectl get ns`. 
+`kubectl get ns`  
 
 Declarative way
 **example_ns.yaml**
@@ -453,7 +458,7 @@ spec:
     image: nginx
 ```
 
-Get detailed information about the namespace.
+Get detailed information about the namespace.  
 `kubectl describe ns <namespace_name>`
 
 Deploy Pod in specific Namespace.  
@@ -461,7 +466,7 @@ Deploy Pod in specific Namespace.
 `kubectl run nginx --image=nginx --restart=Never -n frontend`
 
 
-Delete Namespace. 
+Delete Namespace.  
 `kubectl delete ns <namespace_name>`  
 
 
