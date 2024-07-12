@@ -164,6 +164,28 @@ spec:
 &#8594; spec  
 
 
+`apiVersion :`
+The `apiVersion` field in a Kubernetes YAML file specifies the version of the Kubernetes API that the resource adheres to. It ensures compatibility between the YAML file and the Kubernetes cluster. For instance, `apiVersion: v1` corresponds to the core Kubernetes API. Additionally, other API versions may be specific to certain Kubernetes extensions or custom resources.  
+
+`kind :`
+The `kind` field defines the type of resource being created or modified. It determines how Kubernetes interprets and manages the resource. Common kinds include `Deployment`, `Service`, `Pod`, `ConfigMap`, and `Ingress`. Each kind has its own set of fields and behavior defined in the Kubernetes API.  
+
+
+`metadata :`
+The `metadata` field contains essential information about the resource, such as its name, labels, and annotations. It helps identify and organize resources within the cluster. The following are important subfields of metadata:
+&#8594; *name:* Specifies the name of the resource, allowing it to be uniquely identified within its namespace.  
+&#8594; *labels:* Enables categorization and grouping of resources based on key-value pairs. Labels are widely used for selecting resources when using selectors or applying deployments.  
+&#8594; *annotations:* Provides additional information or metadata about the resource. Annotations are typically used for documentation purposes, tooling integrations, or adding custom metadata.  
+
+`spec :`
+The `spec` field describes the desired state of the resource. It outlines the configuration details and behavior of the resource. The structure and content of the `spec` field vary depending on the resource kind. Here are a few examples:  
+&#8594; *Deployment:* The `spec` includes details such as the number of replicas, container specifications (e.g., image, ports, environment variables), and volume mounts.  
+&#8594; *Service:* The `spec` defines the networking rules for the service, including the exposed ports, service type (e.g., ClusterIP, NodePort, LoadBalancer), and target ports.    
+&#8594; *Pod:* The `spec` describes the container specifications, such as the image, ports, environment variables, and volumes.  
+&#8594; *ConfigMap:* The `spec` specifies the key-value pairs or configuration files that need to be made available to containers as environment variables or mounted volumes.  
+
+
+
 ### Multi-Container Pods
 The primary purpose of a multi-container Pod is to support co-located, co-managed helper processes for a main program. There are some general patterns of using helper processes in Pods:  
 Sidecar containers "help" the main container. For example, log or data change watchers, monitoring adapters, and so on. A log watcher, for example, can be built once by a different team and reused across different applications. Another example of a sidecar container is a file or data loader that generates data for the main container.
