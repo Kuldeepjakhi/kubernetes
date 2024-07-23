@@ -1224,6 +1224,336 @@ spec:
     version: grafana-v1
   type: NodePort
 ```
+
+
+## Node Selector,Node Affinity and Pod Affinity
+
+`Node selector` and `Node affinity` are two ways to specify the nodes where a pod should be scheduled in a Kubernetes cluster, based on specific criteria like labels or other attributes.  Node selector uses a basic key-value matching mechanism, while node affinity provides more advanced rule-based matching.  
+
+
+## nodeSelector
+`nodeSelector` is the simplest recommended form of node selection constraint. You can add the nodeSelector field to your Pod specification and specify the node labels you want the target node to have. Kubernetes only schedules the Pod onto nodes that have each of the labels you specify.
+
+1. List the nodes in your cluster, along with their labels:
+
+`kubectl get nodes --show-labels`  
+
+2. Choose one of your nodes, and add a label to it:
+
+`kubectl label nodes <your-node-name> node_type=ssd`
+
+
+`node_selector.yml`  
+
+``` yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  tomcat-deployment-nautilus
+  namespace: tomcat-namespace-nautilus
+  labels:
+    name: webdep
+    app: demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: webpod
+      app: demo
+  template:
+    metadata:
+      name: webpod
+      labels:
+        name: webpod
+        app: demo
+    spec:
+      containers:
+        - name: tomcat-container-nautilus
+          image: bitnami/tomcat
+          ports:
+            - containerPort: 8080
+      nodeSelector:
+        systyp: cpu-based
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tomcat-service-nautilus
+  namespace: tomcat-namespace-nautilus
+spec:
+  type: NodePort
+  selector:
+    name: webpod
+    app: demo
+  ports:
+      # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 8080
+      targetPort: 8080
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 32227
+
+```
+
+
+## Node affinity
+
+Node affinity is conceptually similar to nodeSelector, allowing you to constrain which nodes your Pod can be scheduled on based on node labels. 
+
+It is provides more granular control over the selection process. Node affinity enables a conditional approach with logical operators in the matching process, while nodeSelector is limited to looking for exact label key-value pair matches. Node affinity is specified in the PodSpec using the nodeAffinity field in the affinity section.. There are two types of node affinity:
+
+`requiredDuringSchedulingIgnoredDuringExecution:` The scheduler can't schedule the Pod unless the rule is met. This functions like nodeSelector, but with a more expressive syntax. It is also called Hard affinity. 
+
+
+`preferredDuringSchedulingIgnoredDuringExecution:`` The scheduler tries to find a node that meets the rule. If a matching node is not available, the scheduler still schedules the Pod. It is also called Soft affinity.  
+
+
+*Note:* In the preceding types, IgnoredDuringExecution means that if the node labels change after Kubernetes schedules the Pod, the Pod continues to run.  
+
+
+
+### 1. requiredDuringSchedulingIgnoredDuringExecution. 
+
+*`Node_Affinity_requiredDuringScheduling.yaml`*
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pod
+spec:
+  containers:
+    - name: demo-container
+      image: redis:latest
+      ports:
+        - containerPort: 6379
+    # ...
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+            - key: node_type
+              operator: In
+              values:
+                - ssd
+                - hdd
+          - matchExpressions:
+            - key: internal
+              operator: Exists
+```
+
+
+This manifest creates a hard affinity rule that schedules the Pod to a Node meeting the following criteria:  
+
+It has a `node_type` label with either `ssd` or `hdd` as the value.
+It has an internal label with any value.
+You can attach additional conditions by repeating the matchExpressions clause. Supported operators for value comparisons are `In, NotIn, Exists, DoesNotExist, Gt` (greater than), and `Lt` (less than).  
+
+
+### 2. preferredDuringSchedulingIgnoredDuringExecution.  
+
+
+The following manifest specifies a preferred node affinity, which states that pods created from this template should preferably be scheduled to a node that has a disk type of ssd, but if this criterion does not exist, the pod can still be scheduled.  
+
+
+``` yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  node-affinity-example
+  labels:
+    app:  demo-deploy
+spec:
+  selector:
+    matchLabels:
+      app: demo-container
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app:  demo-container
+    spec:
+      containers:
+        - name: demo-container
+          image: redis:latest
+          ports:
+            - containerPort: 6379
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                - ssd
+                - hdd
+```
+
+
+### 3. Both requiredDuringSchedulingIgnoredDuringExecution & preferredDuringSchedulingIgnoredDuringExecution uses.  
+
+``` yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  node-affinity-require-preffered
+  labels:
+    app:  demo-deploy
+spec:
+  selector:
+    matchLabels:
+      app: demo-container
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app:  demo-container
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: label-1
+                operator: In
+                values:
+                - key-1
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: label-2
+                operator: In
+                values:
+                - key-2
+      containers:
+      - name: demo-container
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+```
+
+If there are two possible nodes that match the preferredDuringSchedulingIgnoredDuringExecution rule, one with the label-1:key-1 label and another with the label-2:key-2 label, the scheduler considers the weight of each node and adds the weight to the other scores for that node, and schedules the Pod onto the node with the highest final score.  
+
+*Note*: If you want Kubernetes to successfully schedule the Pods in this example, you must have existing nodes with the kubernetes.io/os=linux label.  
+
+
+## Inter-pod affinity and anti-affinity  
+Inter-pod affinity and anti-affinity allow you to constrain which nodes your Pods can be scheduled on based on the labels of Pods already running on that node, instead of the node labels.  
+Inter-pod affinity lets you specify that certain pods should only schedule to a node together with other pods. This enables various use cases where collocation of pods is important, for performance, networking, resource utilization, or other reasons.  
+ 
+
+
+### 1. Create pods with label `security=S1`  
+
+     `Pod_with_label1_Affinity.yaml`  
+
+``` yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-s1
+spec:
+  selector:
+    matchLabels:
+      security: S1
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        security: S1
+    spec:
+      containers:
+      - name: redis
+        image: redis
+        ports:
+        - containerPort: 6379
+```
+
+
+### 2. Create pods with label `security=S2`  
+
+    Pod_with_label2_Affinity.yaml  
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-s2
+  labels:
+    security: S2
+spec:
+  containers:
+  - name: security-s2
+    image: redis
+```
+
+
+### 3. Create Pods and apply Pod Affinity and anti affinity.
+
+``` yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-affinity-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: security
+                operator: In
+                values:
+                - S1
+            topologyKey: "kubernetes.io/hostname"
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: security
+                  operator: In
+                  values:
+                  - S2
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+```
+
+
+
+In Below example defines one Pod affinity rule and one Pod anti-affinity rule. The Pod affinity rule uses the “hard” `requiredDuringSchedulingIgnoredDuringExecution`, while the anti-affinity rule uses the "soft" `preferredDuringSchedulingIgnoredDuringExecution`.  
+
+The affinity rule says that the scheduler can only schedule a Pod onto a node if the node is in the same zone as one or more existing Pods with the label security=S1. More precisely, the scheduler must place the Pod on a node that has the topology.kubernetes.io/zone=V label, as long as there is at least one node in that zone that currently has one or more Pods with the Pod label `security=S1`.  
+
+The anti-affinity rule says that the scheduler should try to avoid scheduling the Pod onto a node that is in the same zone as one or more Pods with the label `security=S2`. More precisely, the scheduler should try to avoid placing the Pod on a node that has the topology.kubernetes.io/zone=R label if there are other nodes in the same zone currently running Pods with the Security=S2 Pod label. 
+
 ### Ingress Controller Create:
 ``` bash
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
