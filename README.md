@@ -1458,7 +1458,7 @@ Inter-pod affinity lets you specify that certain pods should only schedule to a 
 
 ### 1. Create pods with label `security=S1`  
 
-     `Pod_with_label1_Affinity.yaml`  
+`Pod_with_label1_Affinity.yaml`  
 
 ``` yaml
 apiVersion: apps/v1
@@ -1485,7 +1485,7 @@ spec:
 
 ### 2. Create pods with label `security=S2`  
 
-    Pod_with_label2_Affinity.yaml  
+`Pod_with_label2_Affinity.yaml` 
 
 ``` yaml
 apiVersion: v1
@@ -1502,6 +1502,8 @@ spec:
 
 
 ### 3. Create Pods and apply Pod Affinity and anti affinity.
+
+`Pod_Affinity.yaml`
 
 ``` yaml
 apiVersion: apps/v1
