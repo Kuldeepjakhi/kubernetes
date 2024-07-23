@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  demo-deploy
+  labels:
+    app:  demo-deploy
+spec:
+  selector:
+    matchLabels:
+      app: demo-container
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app:  demo-container
+    spec:
+      containers:
+        - name: demo-container
+          image: redis:latest
+          ports:
+            - containerPort: 6379 
+        # ...
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: node_type
+                  operator: In
+                  values:
+                    - ssd
+                    - hdd
+              - matchExpressions:
+                - key: internal
+                  operator: Exists

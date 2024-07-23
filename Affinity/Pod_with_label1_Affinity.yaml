@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-s1
+spec:
+  selector:
+    matchLabels:
+      security: S1
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        security: S1
+    spec:
+      containers:
+      - name: redis
+        image: redis
+        ports:
+        - containerPort: 6379

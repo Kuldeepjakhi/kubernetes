@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-container-test-anti-affinity
+  labels:
+    app: redis
+spec:
+  containers:
+  - name: redis-container-test-anti-affinity
+    image: redis

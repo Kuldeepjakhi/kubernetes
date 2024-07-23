@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  demo-deploy
+  labels:
+    app:  demo-deploy
+spec:
+  selector:
+    matchLabels:
+      app: demo-container
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app:  demo-container
+    spec:
+      containers:
+        - name: demo-container
+          image: redis:latest
+          ports:
+            - containerPort: 6379 
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: e2e-az-EastWest
+                operator: In
+                values:
+                - e2e-az-East
+                - e2e-az-West

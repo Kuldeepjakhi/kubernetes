@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  node-affinity-require-preffered
+  labels:
+    app:  demo-deploy
+spec:
+  selector:
+    matchLabels:
+      app: demo-container
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app:  demo-container
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: label-1
+                operator: In
+                values:
+                - key-1
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: label-2
+                operator: In
+                values:
+                - key-2
+      containers:
+      - name: demo-container
+        image: redis:latest
+        ports:
+        - containerPort: 6379
