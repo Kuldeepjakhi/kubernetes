@@ -1548,7 +1548,7 @@ spec:
 
 
 
-In Below example defines one Pod affinity rule and one Pod anti-affinity rule. The Pod affinity rule uses the “hard” `requiredDuringSchedulingIgnoredDuringExecution`, while the anti-affinity rule uses the "soft" `preferredDuringSchedulingIgnoredDuringExecution`.  
+In This example defines one Pod affinity rule and one Pod anti-affinity rule. The Pod affinity rule uses the “hard” `requiredDuringSchedulingIgnoredDuringExecution`, while the anti-affinity rule uses the "soft" `preferredDuringSchedulingIgnoredDuringExecution`.  
 
 The affinity rule says that the scheduler can only schedule a Pod onto a node if the node is in the same zone as one or more existing Pods with the label security=S1. More precisely, the scheduler must place the Pod on a node that has the topology.kubernetes.io/zone=V label, as long as there is at least one node in that zone that currently has one or more Pods with the Pod label `security=S1`.  
 
