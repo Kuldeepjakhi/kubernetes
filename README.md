@@ -1554,7 +1554,155 @@ In This example defines one Pod affinity rule and one Pod anti-affinity rule. Th
 
 The affinity rule says that the scheduler can only schedule a Pod onto a node if the node is in the same zone as one or more existing Pods with the label security=S1. More precisely, the scheduler must place the Pod on a node that has the topology.kubernetes.io/zone=V label, as long as there is at least one node in that zone that currently has one or more Pods with the Pod label `security=S1`.  
 
-The anti-affinity rule says that the scheduler should try to avoid scheduling the Pod onto a node that is in the same zone as one or more Pods with the label `security=S2`. More precisely, the scheduler should try to avoid placing the Pod on a node that has the topology.kubernetes.io/zone=R label if there are other nodes in the same zone currently running Pods with the Security=S2 Pod label. 
+The anti-affinity rule says that the scheduler should try to avoid scheduling the Pod onto a node that is in the same zone as one or more Pods with the label `security=S2`. More precisely, the scheduler should try to avoid placing the Pod on a node that has the topology.kubernetes.io/zone=R label if there are other nodes in the same zone currently running Pods with the Security=S2 Pod label.  
+
+
+## StatefulSets
+
+StatefulSets are used to manage stateful applications that require persistent storage, stable unique network identifiers, and ordered deployment and scaling. They are very useful for databases and data stores that require persistent storage or for distributed systems and consensus-based applications such as etcd and ZooKeeper.  
+
+
+StatefulSet is a workload API object which manages the deployment and scaling of a set of Pods and provides guarantees about the ordering and uniqueness of these Pods. For example, a three-replica StatefulSet would result in Pods named web-0, web-1, and web-2 being created. If web-1 fails, it will be recreated with the same name, preserving its state.  
+
+
+StatefulSets provide several advantages over the ReplicaSet and Deployment controllers used for stateless Pods:
+
+*Reliable replica identifiers.* Each Pod in a StatefulSet is allocated a persistent identifier. The Pod will retain its identifier even if it’s replaced or rescheduled, ensuring the new Pod runs with the same characteristics.  
+*Stable storage access.* Pods in a StatefulSet are individually assigned their own Persistent Volume claims. The Pod’s volume will be reattached after it’s rescheduled, providing stable storage access after a rollout or scaling operation.  
+*Rolling updates in a guaranteed order.* StatefulSets support automated rolling updates in the order that Pods were created. You can predict the order in which an update will apply, with newer Pods only replaced once older ones have updated.  
+*Consistent network identities.* Pods in StatefulSets have reliable network identities. Their hostnames include their numerical replica identifier, allowing external applications to interact with the same replica after a Pod’s rescheduled.
+
+
+### StatefulSet vs. DaemonSet vs. Deployment
+While all three are pretty similar, and their main purpose is to create pods based on your configuration, they are used for the following:  
+
+`StatefulSets` are used for stateful applications, and they maintain a sticky identity for each of their pods.   
+`DaemonSet` are used to keep a copy of a pod on all the nodes inside the cluster, making them a great choice for node-level services.  
+`Deployments` manage stateless applications, providing declarative updates to applications with capabilities for scaling, rolling updates, and rollbacks.  
+
+<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*AYs-UVxeZ4upfmqgktIWtQ.png" width="60%" height="60%">
+
+
+### Creating a StatefulSet   
+First, create a `headless service` for your deployment. A headless service is a service that defines a port binding but has its `clusterIP` set to `None`. StatefulSets require you to create a headless service to control their network identities.  
+
+Copy the following YAML and save it as `postgres-service.yaml` in your working directory:  
+
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+  clusterIP: None
+  selector:
+    app: postgres
+
+```
+
+`kubectl apply -f postgres-service.yaml`  
+
+Next, copy the following YAML to `postgres-statefulset.yaml`. It defines a StatefulSet that runs three replicas of the postgres:latest image.
+
+``` yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  serviceName: postgres
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      initContainers:
+        - name: postgres-init
+          image: postgres:latest
+          command:
+          - bash
+          - "-c"
+          - |
+            set -ex
+            [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+            ordinal=${BASH_REMATCH[1]}
+            if [[ $ordinal -eq 0 ]]; then
+              printf "I am the primary"
+            else
+              printf "I am a read-only replica"
+            fi
+      containers:
+        - name: postgres
+          image: postgres:latest
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+          ports:
+          - name: postgres
+            containerPort: 5432
+          livenessProbe:
+            exec:
+              command:
+                - "sh"
+                - "-c"
+                - "pg_isready --host $POD_IP"
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - "sh"
+                - "-c"
+                - "pg_isready --host $POD_IP"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+          volumeMounts:
+          - name: data
+            mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
+
+```
+
+` kubectl apply -f postgres-statefulset.yaml`  
+
+
+The StatefulSet uses init containers to determine whether new Pods are the Postgres primary or a replica.    
+
+`kubectl logs postgres-0 -c postgres-init`   
+
+
+`kubectl logs postgres-1 -c postgres-init`
+
+`kubectl get pv`
+
+`kubectl get pvc`  
+
+
 
 ### Ingress Controller Create:
 ``` bash
