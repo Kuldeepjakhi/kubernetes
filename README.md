@@ -1567,10 +1567,10 @@ StatefulSet is a workload API object which manages the deployment and scaling of
 
 StatefulSets provide several advantages over the ReplicaSet and Deployment controllers used for stateless Pods:
 
-*Reliable replica identifiers.* Each Pod in a StatefulSet is allocated a persistent identifier. The Pod will retain its identifier even if it’s replaced or rescheduled, ensuring the new Pod runs with the same characteristics.  
-*Stable storage access.* Pods in a StatefulSet are individually assigned their own Persistent Volume claims. The Pod’s volume will be reattached after it’s rescheduled, providing stable storage access after a rollout or scaling operation.  
-*Rolling updates in a guaranteed order.* StatefulSets support automated rolling updates in the order that Pods were created. You can predict the order in which an update will apply, with newer Pods only replaced once older ones have updated.  
-*Consistent network identities.* Pods in StatefulSets have reliable network identities. Their hostnames include their numerical replica identifier, allowing external applications to interact with the same replica after a Pod’s rescheduled.
+*Reliable replica identifiers*. Each Pod in a StatefulSet is allocated a persistent identifier. The Pod will retain its identifier even if it’s replaced or rescheduled, ensuring the new Pod runs with the same characteristics.  
+*Stable storage access*. Pods in a StatefulSet are individually assigned their own Persistent Volume claims. The Pod’s volume will be reattached after it’s rescheduled, providing stable storage access after a rollout or scaling operation.  
+*Rolling updates in a guaranteed order*. StatefulSets support automated rolling updates in the order that Pods were created. You can predict the order in which an update will apply, with newer Pods only replaced once older ones have updated.  
+*Consistent network identities*. Pods in StatefulSets have reliable network identities. Their hostnames include their numerical replica identifier, allowing external applications to interact with the same replica after a Pod’s rescheduled.
 
 
 ### StatefulSet vs. DaemonSet vs. Deployment
