@@ -1703,10 +1703,331 @@ The StatefulSet uses init containers to determine whether new Pods are the Postg
 `kubectl get pvc`  
 
 
+## DaemonSet  
 
-### Ingress Controller Create:
+A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are added to the cluster, Pods are added to them. As nodes are removed from the cluster, those Pods are garbage collected. Deleting a DaemonSet will clean up the Pods it created.  
+
+Some typical uses of a DaemonSet are:  
+
+* running a cluster storage daemon on every node
+* running a logs collection daemon on every node
+* running a node monitoring daemon on every node
+
+
+By default, Kubernetes manages your DaemonSets so that every Node is always running an instance of the Pod. You can optionally customize a DaemonSet’s configuration so that only a subset of your Nodes schedule a Pod.  
+
+When new Nodes join your cluster, they’ll automatically start running applicable Pods that are defined by DaemonSets. Similarly, Kubernetes will deschedule those Pods and run garbage collection when Nodes are deprovisioned.  
+
+Here’s a simple manifest for a DaemonSet that runs the Fluentd logging system on each of your cluster’s Nodes:  
+
+``` yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+ name: fluentd
+spec:
+ selector:
+   matchLabels:
+     app: fluentd
+ template:
+   metadata:
+     labels:
+       app: fluentd
+   spec:
+     containers:
+     - name: fluentd
+       image: arm64v8/fluentd:v1.16-debian-1
+       volumeMounts:
+       - name: varlog
+         mountPath: /var/log
+       - name: varlibdockercontainers
+         mountPath: /var/lib/docker/containers
+         readOnly: true
+     terminationGracePeriodSeconds: 30
+     volumes:
+     - name: varlog
+       hostPath:
+         path: /var/log
+     - name: varlibdockercontainers
+       hostPath:
+         path: /var/lib/docker/containers
+```
+
+**Update a DaemonSet**
+
+DaemonSets are updated in the same way as other Kubernetes objects. You can use the `kubectl update` and `kubectl patch` commands, or take advantage of declarative updates by editing your YAML files, then repeating the kubectl apply command.
+
+**Update a DaemonSet**  
+The standard Kubernetes deletion process applies to DaemonSets too. You can use the kubectl delete command to stop and remove all the Pods created by the DaemonSet, then delete the DaemonSet object itself:  
+
+`kubectl delete daemonset/fluentd`  
+
+Optionally, you can delete just the DaemonSet object, while leaving its Pods intact. To do this, you must specify --cascade=orphan when you issue your deletion command:  
+
+`kubectl delete daemonset/fluentd --cascade=orphan`
+
+
+### Job
+
+Kubernetes simplifies the process of managing, scaling, and deploying applications across clusters of servers. Kubernetes Jobs are a resource within Kubernetes that helps schedule and automatically carry out batch tasks—short-term, one-off tasks that need to be run to completion.  
+
+A Job creates one or more pods (the smallest unit of management in Kubernetes, including one or more containers) and ensures that a specified number of them successfully terminate. For example, let’s say you have a script that needs to be run once a day. Instead of manually starting the script each day, or scheduling a regular cron job on a specific machine (which could fail or malfunction), you can create a Kubernetes Job to handle it automatically. The Job would start a pod, run the script, and then ensure that the pod successfully completed its task.   
+
+### Step 1: Creating a Job
+
+Just like most operations in Kubernetes, you create jobs using a YAML file. The YAML file will contain all the details about your job, like the name of the job, what should happen when a pod fails, and so on. In later steps, we'll take a closer look at the various job configuration options.  
+
+``` yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-world
+spec:
+  template:
+    spec:
+      containers:
+      - name: hello-world
+        image: busybox
+        command: ["echo", "Hello, World!"]
+      restartPolicy: OnFailure
+```
+
+The above configuration is for a job that simply prints "hello world." Next, finish up creating the job by running the following command: 
+
+`kubectl apply -f job.yaml`  
+
+`kubectl get jobs`  
+
+### Step 2: Configuring a Job.  
+From the previous step, we already have a few configurations for our job. However, let's walk through a few more complex configurations. In order to do that, let's create a new job. Create a new hello_world_4x.yaml file and add the following code to it:   
+
+``` yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-world-4x-job
+spec:
+  completions: 4
+  parallelism: 2
+  template:
+    metadata:
+      name: hello-world-4x-job
+    spec:
+      containers:
+      - name: hello-world-4x
+        image: centos:7
+        command:
+         - "bin/bash"
+         - "-c"
+         - "echo hello world"
+      restartPolicy: Never
+```
+
+`completions`, we can perform the same task multiple times. Completions run multiple pods one after the other.   
+
+`Parallelism`: Notice the new configuration item, parallelism. The previous job executed pods one after another. However, we can configure a job to run pods in parallel using this new configuration.   
+
+### Step 3: Schedule a Job
+
+If you need to start jobs at a specific time in the future, or you want to run them in a repetitive pattern at specific intervals, you should consider using a CronJob. A CronJob creates jobs that repeat using a schedule. You can schedule the job using the cron format and can set the schedule in the schedule object.  
+
+``` yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello-world-cron
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello-world
+            image: centos:7
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - "echo Hello World"
+          restartPolicy: OnFailure
+
+```
+
+To delete jobs:  
+
+`kubectl delete jobs/<job-name>`
+
+
+## SERVICE
+
+Kubernetes Services are resources that map network traffic to the Pods in your cluster. You need to create a Service each time you expose a set of Pods over the network, whether within your cluster or externally.
+
+Kubernetes Services are API objects that enable network exposure for one or more cluster Pods. Services are integral to the Kubernetes networking model and provide important abstractions of lower-level components, which could behave differently between different clouds.
+
+
+### Why Services are needed in Kubernetes?  
+Services are necessary because of the distributed architecture of Kubernetes clusters. Apps are routinely deployed as Pods that could have thousands of replicas, spanning hundreds of physical compute Nodes. When a user interacts with your app, their request needs to be routed to any one of the available replicas, regardless of where it’s placed.  
+
+Services sit in front of your Pods to achieve this behavior. All network traffic flows into the Service before being redirected to one of the available Pods. Your other apps can then communicate with the service’s IP address or DNS name to reliably access the Pods you’ve exposed.  
+
+DNS for Services is enabled automatically through the Kubernetes service discovery system. Each Service is assigned a DNS A or AAAA record in the format <service-name>.<namespace-name>.svc.cluster-domain—a service called demo in the default namespace will be accessible within a cluster.local cluster at demo.default.svc.cluster.local, for example. This enables reliable in-cluster networking without having to lookup service IP addresses.  
+
+
+<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*tnK94zrEwyNe1hL-PhJXOA.png" width="60%" height="60%">
+
+## Service types.   
+### 1. ClusterIP
+*     ClusterIP is the default and most common service type.
+*     Kubernetes will assign a cluster-internal IP address to ClusterIP service. This makes the service only reachable within the cluster.
+*     You cannot make requests to service (pods) from outside the cluster.
+*     You can optionally set cluster IP in the service definition file.
+*Use Cases*
+*     Inter service communication within the cluster. For example, communication between the front-end and back-end components of your app.  
+
+Example: cluster_ip_service.yaml
+
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-clusterip
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx
+  ports:
+    - port: 8080
+      targetPort: 80
+
+```
+`kubectl apply -f cluster_ip_service.yaml`  
+`kubectl get svc`  
+
+
+
+### 2. NodePort
+*     NodePort service is an extension of ClusterIP service. A ClusterIP Service, to which the NodePort Service routes, is automatically created.  
+*     It exposes the service outside of the cluster by adding a cluster-wide port on top of ClusterIP.  
+*     NodePort exposes the service on each Node’s IP at a static port (the NodePort). Each node proxies that port into your Service. So, external traffic has access to fixed port on each Node. It means any request to your cluster on that port gets forwarded to the service.  
+*     You can contact the NodePort Service, from outside the cluster, by requesting <NodeIP>:<NodePort>.  
+*     Node port must be in the range of 30000–32767. Manually allocating a port to the service is optional. If it is undefined, Kubernetes will automatically assign one.
+*     If you are going to choose node port explicitly, ensure that the port was not already used by another service.  
+*Use Cases*
+* When you want to enable external connectivity to your service.  
+* Using a NodePort gives you the freedom to set up your own load balancing solution, to configure environments that are not fully supported by Kubernetes, or even to expose one or more nodes’ IPs directly.  
+*     Prefer to place a load balancer above your nodes to avoid node failure.  
+Example: nodePort_service.yaml
+
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+ name: nginx-nodeport
+spec:
+ type: NodePort
+ selector:
+   run: nginx
+ ports:
+ - nodePort: 30001
+   port: 80
+   targetPort: 80
+```
+`kubectl apply -f nodePort_service.yaml`
+`kubectl get svc`  
+
+
+* nodePort: Tells Kubernetes which port to "open" to the outside world on all of the worker nodes. This makes them accept incoming connections, from outside the cluster, on the port we chose here, 30001.  
+* port: Specifies the port that should be "open" to the cluster, internally. Incoming connections will be accepted on this port, only if they come from within the cluster. External connections won't be accepted on this port.  
+* targetPort: The Service will forward incoming connections to one of the Pods it exposes. "targetPort" specifies on which port of the Pod to send traffic to. E.g., with this config, even if traffic comes to port 30001 on the node, it will be sent to port 80 of the Pod (the "targetPort").  
+
+
+### 3. LoadBalancer   
+*     LoadBalancer service is an extension of NodePort service. NodePort and ClusterIP Services, to which the external load balancer routes, are automatically created.  
+*     It integrates NodePort with cloud-based load balancers.  
+*     It exposes the Service externally using a cloud provider’s load balancer.  
+*     Each cloud provider (AWS, Azure, GCP, etc) has its own native load balancer implementation. The cloud provider will create a load balancer, which then automatically routes requests to your Kubernetes Service.  
+*     Traffic from the external load balancer is directed at the backend Pods. The cloud provider decides how it is load balanced.  
+*     The actual creation of the load balancer happens asynchronously.  
+*     Every time you want to expose a service to the outside world, you have to create a new LoadBalancer and get an IP address.  
+*Use Cases*
+*     When you are using a cloud provider to host your Kubernetes cluster.  
+This type of service is typically heavily dependent on the cloud provider.  
+
+Example: loadbalancer_service.yaml  
+
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-lb
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx
+  ports:
+    - port: 8080
+      targetPort: 80
+```
+
+
+
+### 4. ExternalName
+*     Services of type ExternalName map a Service to a DNS name, not to a typical selector such as my-service.  
+*     You specify these Services with the `spec.externalName` parameter.
+*     It maps the Service to the contents of the externalName field (e.g. foo.bar.example.com), by returning a CNAME record with its value.  
+*     No proxying of any kind is established.  
+*Use Cases*
+*     This is commonly used to create a service within Kubernetes to represent an external datastore like a database that runs externally to Kubernetes.  
+*     You can use that ExternalName service (as a local service) when Pods from one namespace to talk to a service in another namespace.  
+Example external_service.yaml
+
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+ name: db-prod
+spec:
+ type: ExternalName
+ externalName: db-prod.example.com
+```
+
+## Ingress in Kubernetes
+In Kubernetes, Ingress is a resource type similar to Service, that allows you to easily route HTTP and HTTPS traffic entering the cluster through a single entry point to different services inside the cluster. Traffic routing is defined by rules specified on the Ingress resource.  
+Ingress objects refer to allowing HTTP or HTTPS traffic through to your cluster services. They do not expose other ports or protocols to the wider world. For this, you should use a service type such as LoadBalancer or NodePort. A service is an external interface to a logical set of Pods. Services use a ‘virtual IP address’ local to the cluster. External services could not access these IP addresses without an Ingress.  
+
+### When to use Kubernetes Ingress?
+There are many different use cases for Ingress:  
+* Exposing multiple services through a single entry point simplifying traffic routing through URIs, paths, headers, or other methods.  
+* SSL/TLS termination – simplify certificate management and reduce overhead on your services.
+* Authentication and authorization – implement secure access to your services.  
+* Load balancing – even though Ingress and the load balancer service have a lot in common, ingress is internal to the cluster and allows you to route to different services, while the load balancer component is external to the cluster, letting you route traffic to a single service.  
+
+
+<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*Am83wcugl1LkxZ6RKBPNOw.gif" width="60%" height="60%">
+
+
+## Ingress Controllers
+An ingress controller acts as a reverse proxy and load balancer inside the Kubernetes cluster. It provides an entry point for external traffic based on the defined Ingress rules. Without the Ingress Controller, Ingress resources won’t work.  
+
+The Ingress Controller doesn’t run automatically with a Kubernetes cluster, so you will need to configure your own. An ingress controller is typically a reverse web proxy server implementation in the cluster.  
+
+### Examples of Ingress Controllers  
+There are many available Ingress controllers, all of which have different features. The official documentation lists the available Ingress controllers. A few commonly used ones include:  
+
+* AKS Application Gateway Ingress Controller is an ingress controller that configures the Azure Application Gateway.
+* GKE Ingress Controller for Google Cloud
+* AWS Application Load Balancer Ingress Controller
+* HAProxy Ingress is an ingress controller for HAProxy.
+* Istio Ingress is an Istio based ingress controller.
+* The NGINX Ingress Controller for Kubernetes works with the NGINX webserver (as a proxy).
+* The Traefik Kubernetes Ingress provider is an ingress controller for the Traefik proxy.
+
+
+### Ingress Controller Setup:
 ``` bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.3/deploy/static/provider/baremetal/deploy.yaml
 kubectl get pods --namespace=ingress-nginx
 kubectl get pods --namespace=ingress-nginx
 kubectl get pods --namespace=ingress-nginx
@@ -1715,4 +2036,77 @@ kubectl expose deployment demo
 kubectl create ingress demo-localhost --class=nginx \\n  --rule="demo.localdev.me/*=demo:80"
 kubectl port-forward --namespace=ingress-nginx service/ingress-nginx-controller 8080:80
 ```
+
+### Ingress Example: 
+
+
+``` yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-server
+  namespace: web
+spec:
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: httpd
+        image: httpd:2.4.53-alpine
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-server-service
+  namespace: web
+spec:
+  selector:
+    app: web
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-server-ingress
+  namespace: web
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: web.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-server-service
+            port:
+              number: 5000
+```
+
+`kubectl apply -f simple-web-server-with-ingress.yaml`
+
+Verify that you can access your application using the NodePort.  
+
+`curl <worker-external-ip>:<node-port> -H 'Host: web.example.com'`
+
+
+### Ingress to route traffic between the two apps.  
+
+
 
