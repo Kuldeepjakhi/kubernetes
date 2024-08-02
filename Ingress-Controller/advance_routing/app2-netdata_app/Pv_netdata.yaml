@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: data5
+  labels:
+    type: local
+    app: netdata
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/Users/kuldeepsingh/Learning/Kubernetes/Local-Setup/kubernetes/Statefulset/data"

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: msg-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: msg-app
+  template:
+    metadata:
+      name: msg-app-pod
+      labels:
+        app: msg-app
+    spec:
+      containers:
+        - name: msg-app
+          image: arm64v8/rabbitmq:3-management
+          ports:
+            - containerPort: 15672
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: msg-app-service
+spec:
+  selector:
+    app: msg-app
+  type: NodePort
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      nodePort: 30036
+      targetPort: 15672

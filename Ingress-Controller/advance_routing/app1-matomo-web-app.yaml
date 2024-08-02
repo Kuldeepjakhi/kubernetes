@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matomo
+spec:
+  selector:
+    matchLabels:
+      app: matomo
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: matomo
+    spec:
+      containers:
+      - name: matomo-app
+        image: crazymax/matomo:latest
+        ports:
+        - containerPort: 8000
+          name: web-port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matomo
+  labels:
+    apps: matomo
+spec:
+  type: NodePort
+  ports:
+  - name: tcp-31082-5000
+    nodePort: 31082
+    port: 8000
+    protocol: TCP
+  selector:
+    app: matomo
