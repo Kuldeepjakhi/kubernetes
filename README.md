@@ -2236,8 +2236,7 @@ Kubernetes includes a robust RBAC implementation that can be used to segregate u
 
 RBAC roles therefore align with the physical structure of your teams, apps, and departments. You could create roles such as Developer, Manager, and Security Team, each of which provides different permissions. Developer might have relatively restricted permissions, while Manager receives a broader range because of the increased oversight required by those individuals.  
 
-
-![](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*9Mu6GHHpxX4KgA9vdaTXKQ.gif)
+![RBAC](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*9Mu6GHHpxX4KgA9vdaTXKQ.gif)
 
 It consists of four main components:   
 * `Roles:` A Role is a namespaced resource that defines a set of permissions for accessing Kubernetes resources within a single namespace. Roles can assign permissions for API resources like pods, deployments, services, and more.  
