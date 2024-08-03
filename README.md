@@ -406,6 +406,125 @@ The restartPolicy for a Pod applies to app containers in the Pod and to regu
 
 Setting the restart policy to Always doesn't mean Kubernetes will keep trying to restart a failed Pod perpetually. Instead, it uses an exponential back-off delay that starts at 10 seconds and goes up to five minutes. In other words, let's say you have a Pod with a critical error that prevents it from completing its startup process. Kubernetes will try to start it, see that it failed, wait 10 seconds, then restart it. The next time it fails, Kubernetes will wait 20 seconds, then 40 seconds, then 1 minute 20 seconds, etc, all the way up to five minutes. After this point, if the container still fails to start, Kubernetes will no longer try to start it. But if Kubernetes does manage to get the container running, this timer will reset after 10 minutes of continuous runtime.  
 
+### Init Containers:  
+Definition: Init Containers are special containers that run before the main application containers in a pod start.  
+
+They are designed to perform initialization tasks, such as setting up configuration files, initializing databases, or any other operation necessary for the proper functioning of the application.  
+
+
+Example:  
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: website
+spec:
+  initContainers:
+    - name: clone-repo
+      image: alpine/git
+      command:
+      - git
+      - clone
+      - --progress
+      - https://github.com/lmammino/sample-web-project.git
+      - /usr/share/nginx/html
+      volumeMounts:
+        - name: web
+          mountPath: '/usr/share/nginx/html'
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - name: http
+          containerPort: 80
+      volumeMounts:
+        - name: web
+          mountPath: '/usr/share/nginx/html'
+  volumes:
+    - name: web
+      emptyDir: {}
+
+```
+
+`kubect apply -f init-container.yaml`
+`kubect get pods`
+`kubectl logs website -c clone-repo`
+`kubectl port-forward pod/website 8000:80`
+
+Check URL: localhost:8000  
+
+
+### What is a Sidecar Container?  
+A sidecar container is a design pattern that allows you to run an additional container alongside your main container in the same pod. The sidecar container can perform tasks that complement the main container, such as syncing data from a remote source, collecting and shipping logs, providing health checks and metrics, proxying network traffic, encrypting or decrypting data, or injecting faults for testing.  
+
+**Why use Kubernetes sidecar container**
+The sidecar container provides helper functionality to the main container, such as file synchronization, logging, and watcher capabilities.  
+
+Sidecars are not part of the main traffic or API of the primary application. They usually operate asynchronously and are not involved in the public API. This way, they can enhance the main container without modifying its code or image.  
+
+Example: deployment file - sidecar_container.yaml
+
+``` yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    app: nginx
+spec:
+  containers:
+  #App container
+  - name: nginx-container
+    image: nginx:latest
+    ports:
+      - containerPort: 80
+    volumeMounts:
+      - name: logs
+        mountPath: /var/log/nginx
+  #This is side container
+  - name: sidecar-container
+    image: busybox
+    command: ["/bin/sh"]
+    args: ["-c", "tail -f /var/log/nginx/access.log"]
+    volumeMounts:
+      - name: logs
+        mountPath: /var/log/nginx
+  volumes:
+    - name: logs
+      emptyDir: {}
+```
+
+
+Service FIle: sidecar-service.yaml
+
+``` yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc
+  labels:
+    app: nginx
+spec:
+  type: NodePort
+  selector:
+    app: nginx
+  ports:
+    - port: 8080
+      targetPort: 80
+```
+
+`kubectl apply -f sidecar_container.yaml`  
+
+`kubectl apply -f sidecar-service.yaml`  
+
+`kubectl get svc`  
+
+Hit Nodeport Url and check sidecar conatiner logs.  
+
+`kubectl logs nginx-pod -c sidecar-container`    
+
+
 
 # Namespaces
 
@@ -1948,7 +2067,7 @@ spec:
 * LoadBalancer service is an extension of NodePort service. NodePort and ClusterIP Services, to which the external load balancer routes, are automatically created.  
 * It integrates NodePort with cloud-based load balancers.  
 * It exposes the Service externally using a cloud provider’s load balancer.  
-*     Each cloud provider (AWS, Azure, GCP, etc) has its own native load balancer implementation. The cloud provider will create a load balancer, which then automatically routes requests to your Kubernetes Service.  
+* Each cloud provider (AWS, Azure, GCP, etc) has its own native load balancer implementation. The cloud provider will create a load balancer, which then automatically routes requests to your Kubernetes Service.  
 * Traffic from the external load balancer is directed at the backend Pods. The cloud provider decides how it is load balanced.  
 * The actual creation of the load balancer happens asynchronously.  
 * Every time you want to expose a service to the outside world, you have to create a new LoadBalancer and get an IP address.  
@@ -2107,7 +2226,191 @@ Verify that you can access your application using the NodePort.
 `curl <worker-external-ip>:<node-port> -H 'Host: web.example.com'`
 
 
-### Ingress to route traffic between the two apps.  
+## RBAC
+
+*Overview of RBAC in Kubernetes*  
+
+
+RBAC in Kubernetes allows you to define roles and permissions for users, groups, or service accounts. 
+
+Kubernetes includes a robust RBAC implementation that can be used to segregate users in your cluster. You can set up RBAC rules to restrict users to just the cluster resources they need to access.  
+
+RBAC roles therefore align with the physical structure of your teams, apps, and departments. You could create roles such as Developer, Manager, and Security Team, each of which provides different permissions. Developer might have relatively restricted permissions, while Manager receives a broader range because of the increased oversight required by those individuals.  
+
+
+<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*9Mu6GHHpxX4KgA9vdaTXKQ.gif" width="60%" height="60%">  
+
+It consists of four main components:   
+* `Roles:` A Role is a namespaced resource that defines a set of permissions for accessing Kubernetes resources within a single namespace. Roles can assign permissions for API resources like pods, deployments, services, and more.  
+* `ClusterRoles:` A ClusterRole is similar to a Role but is cluster-scoped. ClusterRoles can define permissions for cluster-scoped resources like nodes, namespaces, and persistent volumes, as well as non-resource URLs.  
+* `RoleBindings:` A RoleBinding is a namespaced resource that grants the permissions defined in a Role to a user or service account within a specific namespace.  
+* `ClusterRoleBindings:` A ClusterRoleBinding is similar to a RoleBinding but is cluster-scoped. ClusterRoleBindings grants the permissions defined in a ClusterRole to users or service accounts across the entire cluster.  
+
+
+*Kubernetes provides a set of default ClusterRoles that can be used to grant common sets of permissions. Some examples include:*  
+* `view:` Allows read-only access to most resources in a namespace.  
+* `edit:` Allows read/write access to most resources in a namespace.  
+* `admin:` Allows full access to all resources in a namespace.  
+* `cluster-admin:` Allows full access to all resources in the kubernetes clusters, including the ability to create and manage namespaces.  
+
+ 
+### Users vs Service Accounts
+Before setting up RBAC, it’s important to understand the Kubernetes user model. There are two ways to create “users” depending on the type of access that’s required: 
+
+*Users* — In Kubernetes, a User represents a human who authenticates to the cluster using an external service. You can use private keys (the default method), a list of usernames and passwords, or an OAuth service such as Google Accounts. Users are not managed by Kubernetes; there is no API object for them so you can’t create them using Kubectl. You must make changes at the external service provider.
+*Service Accounts* — Service Accounts are token values that can be used to grant access to namespaces in your cluster. They’re designed for use by applications and system components. Unlike Users, Service Accounts are backed by Kubernetes objects and can be managed using the API.
+
+
+
+*Check whether RBAC is enabled*
+
+`kubectl api-versions | grep rbac`
+
+
+*Create a Service Account*  
+Create a Service Account to use in the next steps. You’ll bind the Role you create to this Service Account: 
+
+File: service_account.yaml   
+
+``` yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rbac-test
+  namespace: default
+```
+
+`kubectl apply -f service_account.yaml`
+
+Next create an authorization token for your Service Account:   
+
+
+`TOKEN=$(kubectl create token rbac-test)`   
+
+
+Now add a new kubectl context that lets you authenticate as your Service Account. First, add your Service Account as a credential in your Kubeconfig file:     
+
+`kubectl config set-credentials rbac-test --token=$TOKEN`  
+
+Next, add your new context—we’re calling it rbac-test-context. Reference your new rbac-test credential and your current Kubernetes cluster.  
+
+`kubectl config set-context rbac-test-context --cluster=default --user=rbac-test`  
+
+
+Switch Over new context:
+
+`kubectl config use-context rbac-test-context`  
+
+`kubectl config current-context`   
+
+check if pod listing   
+
+`kubectl get pods`  
+
+ERROR: `Error from server (Forbidden): pods is forbidden: User "system:serviceaccount:default:rbac-test" cannot list resource "pods" in API group "" in the namespace "default"`  
+
+Switch back to default context.   
+
+`kubectl config use-context kubernetes-admin@kubernetes`   
+
+*copy existing kube config file content in new file and change context, token and user*
+
+``` json
+
+apiVersion: v1
+kind: Config
+preferences: {}
+
+clusters:
+- name: default
+  cluster:
+    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJRWJqbkxzT3VCWTR3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRBM01EUXhNek16TkRoYUZ3MHpOREEzTURJeE16TTRORGhhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURPdERKb0kwbzBXNFhSTGlFTmZ5bmZBRE95enF6MTRKZnF0YmVwbGVTLzl0aU4xdjltTTVaL1pGVXIKVFNzWTE1UTVLN0piZjhwRjh3aW5HNUYxY3RsWWQwRCtDRUNINERqNjF2cGdCUStXaGRlSG44RTA4aVcwSEN4UQpBcVBXbVlEeCtrMUtMNjZBQjlKelYrWEtLN0h6em5LTHVlQnNIME1weVU5cElzcU1rWGpxcks4OFkwd0F4NUFKClFCck12TlM5cUZXOWJOeUk5RnB2WllDU01pSkEzbUgxR3hnOTFTYkV4TkFyWUZhZ1R0a3NUSlJWZVVNUHdFOUcKZ1RIVHg3RnNzTXg0ckR6YzNRaCtrZmNoTGI0N3NxdFU5QVBzbmJ6dmora2FQSWZSQzFzM2xtcVNxZ213N3FPeQp1d3FpUGl6Z2pSUFZKTU9aVEZ4WGJ0Nzk1NFRIQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJUUTBSTExibVJqaEhETWNRQ0FiaEorWUd2ek5qQVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQTd6dUFBQ0VXdAphQ1lOSVlteGFlcUQ3ZDVpeXRVeG1LM0pZRHB4cmw1aHNWU0ZzQjRDN0RkdjRmU3JKR1dyM1gxT0UyTmpHb0hLCng1RDEvNFhOUUd1L0FlK1dOTmg5UklId0pDUzNKTjUyQmhhNEdidHJ6dlZtc2d0K2pYVlR0TXZ4ZFdnYUdkUWIKODA0TzBpSzVtUTlrOWpHdUgvUTRhRUF1cHhIWVBHZFNYYnpvaGlvc2gyUlI4cTcxelhUQjdPT21Cc3lUTllHMgpiVVJ4RG9ScnNQY0FZUjM0dGpSTVRKenlvOFd1emw5MVp4UmZrSWVjM1JKK3BYbHJhK0VaYlMrMXpiMHU0TmhiCmdRR1cwVGFSTGRZNzQxNTd1OGV6d0ZJSFJCWC9kM1BQNUd0ZzgwWnhkd1kxc3lXdkpyTXgwTVFGNWhUMTRTOXIKRzllUlBHMzdYUFJnCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    server: https://192.168.56.129:6443
+
+users:
+- name: rbac-test-user
+  user:
+    as-user-extra: {}
+    token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjctX2t4X21KUl9TY2QtSGlMMmhTQ1FPNXF1bHVkUUZWaTNlbGFEVGhEbzQifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzIxMjk1Nzc0LCJpYXQiOjE3MjEyOTIxNzQsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6InJiYWMtdGVzdCIsInVpZCI6Ijk1NDY0ODJmLTBjOWItNGI2MC1hYmNmLTNlM2FhMzhiZDExNyJ9fSwibmJmIjoxNzIxMjkyMTc0LCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6ZGVmYXVsdDpyYmFjLXRlc3QifQ.Bt_WDKJu6HotQbJZ_v8SCSRhFV-2Z9MJ7Rlu19kpJBat0gb1OhSufW5eunnYUSIbPgbO_c9eF9KFGQypVvo2MLhVCSdx6xvdQxUkbh5finQoDhDCSgN-6gUCdYIht9NjfeMRqDi1Os_WZHQk44SU-XgTVhwdKQG8qxiOJhs2vZwJQT2_e3nlHaUJnMFkixcKrsJRGLsNiUlnjflBlOeKc_r2NOWbXZFKBzE93CqaOdfqUxGnCXhb_3RFEsIzPwo0ZjRyFU4HmAEd-35VZ6eUUehiryX9yAJRNQ897GbH7kOtM-mRVZ2ILbvqu4MOyKCemxEXB8TmoI4shw5uaJ8zAg
+
+contexts:
+- name: rbac-test-user
+  context:
+    cluster: default
+    user: rbac-test-user
+    namespace: default
+
+current-context: rbac-test-user
+
+```
+
+`export KUBECONFIG=~/new-kube-config`
+
+*Creating Roles and Rolesbinding.*   
+
+File:  role.yaml   
+
+``` yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployer
+  namespace: default
+rules:
+- apiGroups:
+    - apps
+  resources:
+    - deployments
+  verbs:
+    # we are _not_ including 'create' and 'delete'
+    - get
+    - list
+    - watch
+    - update
+    - patch
+- apiGroups:
+    - ""
+  resources:
+    - pods
+  verbs:
+    # so that we can observe our pods getting created
+    - get
+    - list
+    - watch
+```
+
+
+File: role_binding.yaml
+
+``` yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rbac-test:deployer
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: deployer
+subjects:
+  - kind: ServiceAccount
+    name: rbac-test
+    namespace: default
+```
+
+
+`kubectl apply -f roles.yaml`   
+`kubectl apply -f role_binding.yaml`  
+ 
+
+`export KUBECONFIG=~/new-kube-config`
+
+
+Now switch back to rack-test-context and check pods listing.
+
+
+`kubectl config use-context rbac-test-context` 
+`kubectl get pods`
 
 
 

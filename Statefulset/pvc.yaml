@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: data-postgres-0 
+  name: netdata-parent-database
 spec:
   storageClassName: manual
   accessModes:
