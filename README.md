@@ -2124,8 +2124,7 @@ There are many different use cases for Ingress:
 * Authentication and authorization – implement secure access to your services.  
 * Load balancing – even though Ingress and the load balancer service have a lot in common, ingress is internal to the cluster and allows you to route to different services, while the load balancer component is external to the cluster, letting you route traffic to a single service.  
 
-
-<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*Am83wcugl1LkxZ6RKBPNOw.gif" width="60%" height="60%">
+![](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*Am83wcugl1LkxZ6RKBPNOw.gif)
 
 
 ## Ingress Controllers
@@ -2238,7 +2237,7 @@ Kubernetes includes a robust RBAC implementation that can be used to segregate u
 RBAC roles therefore align with the physical structure of your teams, apps, and departments. You could create roles such as Developer, Manager, and Security Team, each of which provides different permissions. Developer might have relatively restricted permissions, while Manager receives a broader range because of the increased oversight required by those individuals.  
 
 
-<img src="https://miro.medium.com/v2/resize:fit:1400/format:webp/1*9Mu6GHHpxX4KgA9vdaTXKQ.gif" width="60%" height="60%">  
+![](https://miro.medium.com/v2/resize:fit:1400/format:webp/1*9Mu6GHHpxX4KgA9vdaTXKQ.gif)
 
 It consists of four main components:   
 * `Roles:` A Role is a namespaced resource that defines a set of permissions for accessing Kubernetes resources within a single namespace. Roles can assign permissions for API resources like pods, deployments, services, and more.  
@@ -2401,7 +2400,7 @@ subjects:
 
 `kubectl apply -f roles.yaml`   
 `kubectl apply -f role_binding.yaml`  
- 
+
 
 `export KUBECONFIG=~/new-kube-config`
 
