@@ -447,12 +447,12 @@ spec:
 
 ```
 
-`kubect apply -f init-container.yaml`
-`kubect get pods`
-`kubectl logs website -c clone-repo`
-`kubectl port-forward pod/website 8000:80`
+`kubect apply -f init-container.yaml`   
+`kubect get pods`   
+`kubectl logs website -c clone-repo`   
+`kubectl port-forward pod/website 8000:80`   
 
-Check URL: localhost:8000  
+`URL:` localhost:8000  
 
 
 ### What is a Sidecar Container?  
@@ -837,11 +837,11 @@ spec:
     services.nodeports: 10
 ```
 
-`kubectl create ns resource-quota-ns`
-`kubectl apply -f Resource_quota.yaml -n resource-quota-ns`
+`kubectl create ns resource-quota-ns`   
+`kubectl apply -f Resource_quota.yaml -n resource-quota-ns`   
 
-To check resource qouta.
-`kubectl get quota -n resource-quota-ns`
+To check resource qouta.   
+`kubectl get quota -n resource-quota-ns`   
 
 ## Kubernetes QoS Classes
 
@@ -2237,6 +2237,7 @@ Kubernetes includes a robust RBAC implementation that can be used to segregate u
 RBAC roles therefore align with the physical structure of your teams, apps, and departments. You could create roles such as Developer, Manager, and Security Team, each of which provides different permissions. Developer might have relatively restricted permissions, while Manager receives a broader range because of the increased oversight required by those individuals.  
 
 ![RBAC](https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2F868lf3pp70361.png)
+
 
 It consists of four main components:   
 * `Roles:` A Role is a namespaced resource that defines a set of permissions for accessing Kubernetes resources within a single namespace. Roles can assign permissions for API resources like pods, deployments, services, and more.  
