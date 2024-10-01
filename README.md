@@ -2236,7 +2236,7 @@ Kubernetes includes a robust RBAC implementation that can be used to segregate u
 
 RBAC roles therefore align with the physical structure of your teams, apps, and departments. You could create roles such as Developer, Manager, and Security Team, each of which provides different permissions. Developer might have relatively restricted permissions, while Manager receives a broader range because of the increased oversight required by those individuals.  
 
-![RBAC](https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2F868lf3pp70361.png)
+<img src="./images/rbac.png" width=40% height=40%/>
 
 
 It consists of four main components:   
